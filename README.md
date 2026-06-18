@@ -5,10 +5,13 @@ Agent orchestration API with Band.ai integration for multi-agent project managem
 ## Architecture Overview
 
 This API serves as the **Data & Orchestrator** (Backbone) component, responsible for:
-- State management and storage
-- Band.ai API integration and proxy
-- Human-in-the-Loop approval workflows
-- Real-time updates via Server-Sent Events (SSE)
+- **State management and storage** - Centralized StateStore for session, resource, and data management
+- **Band.ai API integration and proxy** - Seamless communication with Band.ai agents
+- **Collector Agent integration** - Data collection from multiple sources (check-ins, status reports, risks, blockers)
+- **Resource Balancer Agent integration** - Resource allocation, load balancing, and capacity management
+- **Human-in-the-Loop approval workflows** - PM approval for critical decisions
+- **Real-time updates via Server-Sent Events (SSE)** - Live updates for all stakeholders
+- **Agent orchestration** - Coordinated workflows between multiple agents
 
 ## Prerequisites
 
@@ -24,11 +27,30 @@ npm install
 
 ## Configuration
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the root directory (see `.env.example` for reference):
 
 ```env
-BAND_API_KEY=your_band_api_key_here
+# Server Configuration
 PORT=3000
+
+# Band.ai API Configuration
+BAND_API_KEY=your_default_band_api_key_here
+
+# Collector Agent Configuration
+COLLECTOR_AGENT_ID=24437a9a-161b-4719-a1d3-1127969c355d
+COLLECTOR_API_KEY=band_a_1781716221_LBcemt1vSVsaQn0z7fimLIOl-N6v2oCb
+
+# Resource Balancer Agent Configuration
+RESOURCE_BALANCER_AGENT_ID=0bcdb5ba-79b1-4072-87c4-3df8538e58b3
+RESOURCE_BALANCER_API_KEY=band_a_1781715758_sfJgn-If3YswFk6PML3xd-4rXxH5XS-S
+
+# Drafter Agent Configuration
+DRAFTER_AGENT_ID=38b68b35-411e-4920-911d-426c4613765b
+DRAFTER_API_KEY=band_a_1781453829_yv5dXz37gUWUF4RekvezT7nayxBCYDxE
+
+# Reviewer Agent Configuration
+REVIEWER_AGENT_ID=3f93702f-f803-45b9-a36a-694c0328a8c9
+REVIEWER_API_KEY=band_a_1781456574__cXtAW4JfRyl-fXJQP2M9_4vk2J030xt
 ```
 
 ## Running the Server
@@ -175,6 +197,261 @@ List messages in a chat room.
 ```bash
 curl -X GET "http://localhost:3000/me/chats/chat_123/messages?limit=50" \
   -H "X-API-Key: your_api_key"
+```
+
+---
+
+### Collector Agent Endpoints
+
+#### Collector Check-in
+```bash
+POST /collector/check-in
+Content-Type: application/json
+Body: {
+  "sessionId": "session_123",
+  "status": "active",
+  "metadata": {}
+}
+```
+
+Register collector agent activity for a session.
+
+**Example:**
+```bash
+curl -X POST http://localhost:3000/collector/check-in \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "session_123",
+    "status": "active"
+  }'
+```
+
+---
+
+#### Submit Collected Data
+```bash
+POST /collector/data
+Content-Type: application/json
+Body: {
+  "sessionId": "session_123",
+  "sourceType": "status-report",
+  "source": "team-standup",
+  "category": "update",
+  "priority": "medium",
+  "content": {
+    "taskId": "TASK-001",
+    "status": "in-progress",
+    "progress": 75
+  }
+}
+```
+
+Submit data collected by the collector agent.
+
+**Example:**
+```bash
+curl -X POST http://localhost:3000/collector/data \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "session_123",
+    "sourceType": "risk-alert",
+    "source": "automated-scan",
+    "category": "risk",
+    "priority": "high",
+    "content": {
+      "description": "Dependency vulnerability detected",
+      "severity": "high"
+    }
+  }'
+```
+
+---
+
+#### Get Collected Data
+```bash
+GET /collector/data?sessionId=xxx&status=pending&category=risk
+```
+
+Retrieve collected data for a session with optional filters.
+
+**Example:**
+```bash
+curl -X GET "http://localhost:3000/collector/data?sessionId=session_123&status=pending"
+```
+
+---
+
+#### Mark Data as Processed
+```bash
+POST /collector/data/:dataId/process
+```
+
+Update the status of collected data to processed.
+
+**Example:**
+```bash
+curl -X POST http://localhost:3000/collector/data/data_456/process
+```
+
+---
+
+### Resource Balancer Agent Endpoints
+
+#### Resource Balancer Check-in
+```bash
+POST /resource-balancer/check-in
+Content-Type: application/json
+Body: {
+  "sessionId": "session_123",
+  "status": "active"
+}
+```
+
+Register resource balancer agent activity.
+
+---
+
+#### Register Resource
+```bash
+POST /resource-balancer/resources
+Content-Type: application/json
+Body: {
+  "name": "Senior Developer",
+  "type": "human",
+  "capacity": 10,
+  "availability": "available",
+  "skills": ["typescript", "react", "nodejs"]
+}
+```
+
+Add a new resource to the resource pool.
+
+**Example:**
+```bash
+curl -X POST http://localhost:3000/resource-balancer/resources \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "CI/CD Pipeline",
+    "type": "infrastructure",
+    "capacity": 5,
+    "availability": "available"
+  }'
+```
+
+---
+
+#### List Resources
+```bash
+GET /resource-balancer/resources?type=human&availability=available
+```
+
+Get all registered resources with optional filters.
+
+**Example:**
+```bash
+curl -X GET "http://localhost:3000/resource-balancer/resources?availability=available"
+```
+
+---
+
+#### Update Resource Status
+```bash
+PATCH /resource-balancer/resources/:resourceId
+Content-Type: application/json
+Body: {
+  "availability": "busy",
+  "currentLoad": 8
+}
+```
+
+Update resource availability or load.
+
+---
+
+#### Allocate Resource
+```bash
+POST /resource-balancer/allocations
+Content-Type: application/json
+Body: {
+  "resourceId": "res_123",
+  "sessionId": "session_456",
+  "taskId": "TASK-001",
+  "estimatedDuration": 3600,
+  "priority": "high"
+}
+```
+
+Create a new resource allocation.
+
+**Example:**
+```bash
+curl -X POST http://localhost:3000/resource-balancer/allocations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resourceId": "res_123",
+    "sessionId": "session_456",
+    "priority": "high"
+  }'
+```
+
+---
+
+#### Get Resource Allocations
+```bash
+GET /resource-balancer/allocations?sessionId=session_123
+```
+
+Retrieve allocations for a session.
+
+---
+
+#### Remove Allocation
+```bash
+DELETE /resource-balancer/allocations/:allocationId
+```
+
+Delete an allocation and free up the resource.
+
+---
+
+#### Submit Balancing Recommendation
+```bash
+POST /resource-balancer/recommendations
+Content-Type: application/json
+Body: {
+  "sessionId": "session_123",
+  "type": "load_balancing",
+  "severity": "warning",
+  "description": "Resource utilization exceeds 80%",
+  "affectedResources": ["res_123", "res_456"],
+  "suggestedActions": ["Allocate additional resources"],
+  "requiresApproval": true
+}
+```
+
+Create a resource balancing recommendation.
+
+---
+
+#### Get Recommendations
+```bash
+GET /resource-balancer/recommendations?sessionId=session_123&severity=critical
+```
+
+Retrieve recommendations for a session.
+
+---
+
+#### Get Project Metrics
+```bash
+GET /resource-balancer/metrics?sessionId=session_123
+```
+
+Retrieve calculated project metrics including resource utilization, task completion, and risk levels.
+
+**Example:**
+```bash
+curl -X GET "http://localhost:3000/resource-balancer/metrics?sessionId=session_123"
 ```
 
 ---
@@ -429,17 +706,27 @@ All endpoints return standardized error responses:
 ```
 PM-PLUS/
 ├── src/
-│   ├── index.ts           # Main server entry point
-│   ├── types.ts           # TypeScript type definitions
-│   ├── store.ts           # In-memory state store
+│   ├── index.ts                      # Main server entry point
+│   ├── types.ts                      # TypeScript type definitions
+│   ├── store.ts                      # Enhanced StateStore with resource tracking
+│   ├── services/
+│   │   ├── bandai.service.ts         # Band.ai API integration service
+│   │   └── orchestrator.service.ts   # Agent orchestration and workflow coordination
 │   └── routes/
-│       ├── agent.ts       # Agent API endpoints
-│       ├── messages.ts    # Human API message endpoints
-│       ├── human.ts       # Human-in-the-Loop endpoints
-│       ├── state.ts       # State management endpoints
-│       ├── updates.ts     # SSE updates endpoint
-│       └── demo.ts        # Legacy demo endpoints
-├── .env                   # Environment variables
+│       ├── agent.ts                  # Agent API endpoints (Band.ai proxy)
+│       ├── messages.ts               # Human API message endpoints
+│       ├── human.ts                  # Human-in-the-Loop endpoints
+│       ├── state.ts                  # State management endpoints
+│       ├── updates.ts                # SSE updates endpoint
+│       ├── demo.ts                   # Legacy demo endpoints
+│       ├── collector.ts              # Collector agent integration
+│       └── resource-balancer.ts      # Resource Balancer agent integration
+├── agents/
+│   ├── agent_config.yaml             # Agent configuration
+│   ├── collector.py                  # Collector agent implementation
+│   └── resource_balancer.py          # Resource Balancer agent implementation
+├── .env                              # Environment variables
+├── .env.example                      # Environment variables template
 ├── package.json
 ├── tsconfig.json
 └── README.md
@@ -454,11 +741,41 @@ PM-PLUS/
 - `npm run build` - Compile TypeScript to JavaScript
 - `npm start` - Run compiled production build
 
+### Key Components
+
+#### StateStore (`src/store.ts`)
+Enhanced in-memory state management with:
+- Session state tracking
+- Resource management (capacity, load, availability)
+- Resource allocation tracking
+- Collected data storage and processing
+- Balancing recommendations
+- Agent messages and check-ins
+- Project metrics calculation
+
+#### Band.ai Service (`src/services/bandai.service.ts`)
+Provides abstraction layer for Band.ai API:
+- Agent profile management
+- Chat context retrieval
+- Activity reporting
+- Message sending
+- Factory pattern for different agent types
+
+#### Orchestrator Service (`src/services/orchestrator.service.ts`)
+Coordinates workflows between agents:
+- Workflow coordination
+- Data processing and routing
+- Risk and blocker handling
+- Resource health monitoring
+- Approval requirement evaluation
+- Agent broadcasting
+
 ### Adding New Endpoints
 
 1. Create a new route file in `src/routes/`
 2. Import and register it in `src/index.ts`
 3. Update this README with documentation
+4. Add Swagger/OpenAPI documentation in route file
 
 ---
 

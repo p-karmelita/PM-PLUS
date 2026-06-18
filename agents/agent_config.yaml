@@ -1,0 +1,15 @@
+drafter:
+  agent_id: "38b68b35-411e-4920-911d-426c4613765b"
+  api_key:  "band_a_1781453829_yv5dXz37gUWUF4RekvezT7nayxBCYDxE"
+
+reviewer:          # <- the new one
+  agent_id: "3f93702f-f803-45b9-a36a-694c0328a8c9"
+  api_key:  "band_a_1781456574__cXtAW4JfRyl-fXJQP2M9_4vk2J030xt"
+
+resource_balancer: # <- the new one
+  agent_id: "0bcdb5ba-79b1-4072-87c4-3df8538e58b3"
+  api_key: "band_a_1781715758_sfJgn-If3YswFk6PML3xd-4rXxH5XS-S"
+
+collector:
+  agent_id: "24437a9a-161b-4719-a1d3-1127969c355d"
+  api_key: "band_a_1781716221_LBcemt1vSVsaQn0z7fimLIOl-N6v2oCb"

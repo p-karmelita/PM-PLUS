@@ -9,6 +9,8 @@ import stateRoutes from './routes/state';
 import agentRoutes from './routes/agent';
 import messagesRoutes from './routes/messages';
 import meRoutes from './routes/me';
+import collectorRoutes from './routes/collector';
+import resourceBalancerRoutes from './routes/resource-balancer';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -46,6 +48,8 @@ app.use('/human', humanRoutes);
 app.use('/state', stateRoutes);
 app.use('/agent', agentRoutes);
 app.use('/me', meRoutes);
+app.use('/collector', collectorRoutes);
+app.use('/resource-balancer', resourceBalancerRoutes);
 app.use('/', messagesRoutes);
 
 // Health check
@@ -81,6 +85,24 @@ app.listen(PORT, () => {
   console.log(`\nHuman API (Band.ai proxy - requires user key):`);
   console.log(`  POST   /me/chats/:chatId/messages`);
   console.log(`  GET    /me/chats/:chatId/messages`);
+  console.log(`\nCollector Agent:`);
+  console.log(`  POST   /collector/check-in`);
+  console.log(`  POST   /collector/data`);
+  console.log(`  GET    /collector/data?sessionId=xxx`);
+  console.log(`  POST   /collector/data/:dataId/process`);
+  console.log(`  POST   /collector/activity`);
+  console.log(`\nResource Balancer Agent:`);
+  console.log(`  POST   /resource-balancer/check-in`);
+  console.log(`  POST   /resource-balancer/resources`);
+  console.log(`  GET    /resource-balancer/resources`);
+  console.log(`  PATCH  /resource-balancer/resources/:resourceId`);
+  console.log(`  POST   /resource-balancer/allocations`);
+  console.log(`  GET    /resource-balancer/allocations?sessionId=xxx`);
+  console.log(`  DELETE /resource-balancer/allocations/:allocationId`);
+  console.log(`  POST   /resource-balancer/recommendations`);
+  console.log(`  GET    /resource-balancer/recommendations?sessionId=xxx`);
+  console.log(`  GET    /resource-balancer/metrics?sessionId=xxx`);
+  console.log(`  POST   /resource-balancer/activity`);
   console.log(`\nHuman-in-the-Loop:`);
   console.log(`  POST   /human/approval-request`);
   console.log(`  POST   /human/approval-response`);
