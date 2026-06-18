@@ -2,9 +2,9 @@
   "name": "pm-plus-api",
   "version": "1.0.0",
   "description": "Agent orchestration API with Band.ai patterns",
-  "main": "src/index.ts",
+  "main": "api/index.ts",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch api/index.ts",
     "build": "tsc",
     "start": "node dist/index.js"
   },
