@@ -1,0 +1,5 @@
+band-sdk
+pydantic>=2.0
+openai>=1.0
+httpx>=0.24
+python-dotenv>=1.0
