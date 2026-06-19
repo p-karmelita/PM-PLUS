@@ -1,14 +1,14 @@
 import type { ApprovalRequest } from '../types';
 
-type View = 'briefing' | 'weekly';
+type View = 'briefing' | 'weekly' | 'risks' | 'team-health' | 'events';
 
 const NAV_SECTIONS = [
   {
     label: 'Overview',
     items: [
       { icon: '⌂', label: 'Today\'s Briefing', key: 'briefing' as View },
-      { icon: '⚠', label: 'Risks',             key: null },
-      { icon: '◎', label: 'Team Health',        key: null },
+      { icon: '⚠', label: 'Risks',             key: 'risks' as View },
+      { icon: '◎', label: 'Team Health',        key: 'team-health' as View },
     ]
   },
   {
@@ -23,7 +23,7 @@ const NAV_SECTIONS = [
     label: 'Reports',
     items: [
       { icon: '↗', label: 'Weekly Summary', key: 'weekly' as View },
-      { icon: '⊞', label: 'All Events',     key: null },
+      { icon: '⊞', label: 'All Events',     key: 'events' as View },
     ]
   }
 ];

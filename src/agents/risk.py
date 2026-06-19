@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import uuid
 from typing import Callable, Optional
 
 import httpx
@@ -120,6 +121,8 @@ class RiskAnalyzerAdapter(SimpleAdapter[list]):
             cprint(f"  [RISK] ✓ NO RISK for {check_in.employee_name}", "green", attrs=["bold"])
             return
 
+        # Never trust the LLM to generate unique identifiers; prompts can be copied verbatim.
+        result["flag_id"] = f"f-{uuid.uuid4().hex[:8]}"
         flag = RiskFlag(**result)
         severity_color = {"LOW": "white", "MEDIUM": "yellow", "HIGH": "red", "CRITICAL": "red"}.get(flag.severity, "white")
         cprint(f"  [RISK] ⚠ RISK DETECTED: {flag.severity} — {flag.risk_type}", severity_color, attrs=["bold"])

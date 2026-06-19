@@ -91,7 +91,54 @@ The API and dashboard are hosted on Railway:
 
 ## 🚀 Quick Start
 
-> **Zero keys needed for the demo.** The dashboard ships with an offline simulation that streams the full 3-loop negotiation — no Band/LLM credentials required.
+### Option 1: One-Command Start (Recommended)
+
+Start the entire system with a single command:
+
+```bash
+./start-all.sh
+```
+
+This will:
+- ✅ Check all prerequisites (Node.js, Python, npm)
+- ✅ Install all dependencies (API, Dashboard, Python agents)
+- ✅ Start API server on port 3000
+- ✅ Start Dashboard on port 5173
+- ✅ Start all 3 Python agents (Risk Analyzer, Reporter, Resource Balancer)
+- ✅ Create logs in `logs/` directory
+
+**Access Points:**
+- 🎨 Dashboard: http://localhost:5173
+- 🔌 API: http://localhost:3000
+- 📚 Swagger Docs: http://localhost:3000/api-docs
+
+## 📊 Dashboard Features
+
+The PM PLUS dashboard provides a comprehensive interface for monitoring and managing your AI-powered project management system:
+
+### Available Views
+
+1. **Today's Briefing** - Main dashboard with stats, approvals, team health, and agent activity
+2. **Risks** - Manage all pending approval requests with approve/reject actions  
+3. **Team Health** - Monitor team workload and blockers
+4. **Weekly Summary** - View weekly statistics and events
+5. **All Events** - Chronological log of all agent communications
+
+### Real-time Updates
+
+The dashboard uses Server-Sent Events (SSE) to provide live updates:
+- Agent messages and communications
+- Approval requests
+- Team health changes
+- Project metrics
+
+See [`DASHBOARD_FEATURES.md`](DASHBOARD_FEATURES.md) for detailed documentation.
+
+---
+
+Press `Ctrl+C` to stop all services.
+
+### Option 2: Manual Start (Development)
 
 **1 — Backend (orchestration API)**
 ```bash
@@ -106,7 +153,24 @@ npm install
 npm run dev          # ➜ http://localhost:5173
 ```
 
-**3 — Run the demo** → open **http://localhost:5173**, wait for the status dot to go 🟢 **Connected**, then click **▶ Run Simulated Demo**. Watch the negotiation loop stream in live, risk climb to **HIGH**, and a flag land in the **HITL Decision Panel** — approve it with a note.
+**3 — Python Agents**
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python src/main.py   # starts all 3 Band agents
+```
+
+**4 — Run the demo** → open **http://localhost:5173**, wait for the status dot to go 🟢 **Connected**, then click **▶ Run Simulated Demo**. Watch the negotiation loop stream in live, risk climb to **HIGH**, and a flag land in the **HITL Decision Panel** — approve it with a note.
+
+### Option 3: Production Build
+
+Build and run the production version:
+
+```bash
+./start-production.sh
+```
+
+This builds the TypeScript API and React dashboard, then serves everything from a single server on port 3000.
 
 <details>
 <summary><b>Run the real agent pipeline against the hosted API</b></summary>
@@ -155,6 +219,47 @@ The observability cockpit ("PM PLUS") proves the negotiation loop in real time:
 | `GET`  | `/agent/me` | Band.ai agent profile proxy |
 
 Full interactive reference: **Swagger UI at `http://localhost:3000/api-docs`**.
+
+### Backbone MVP API (Data & Orchestrator)
+
+Nowy, produkcyjny pion MVP (state + orchestration + HITL) jest dostępny bezpośrednio w API:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/demo/seed-team` | Seed projektu i zespołu (`project-alpha`) |
+| `POST` | `/demo/start-daily-checkin` | Start codziennego check-in (`CHECKIN_REQUESTED`) |
+| `POST` | `/demo/run-full-scenario` | Full E2E: seed → updates → approvals → weekly report |
+| `POST` | `/updates` | Przyjęcie update’u pracownika (Collector → Risk/Balancer/Reporter) |
+| `GET`  | `/updates/:projectId` | Lista znormalizowanych update’ów |
+| `GET`  | `/agent-messages/:projectId` | Pełny łańcuch message passing między agentami |
+| `GET`  | `/decisions/:projectId` | Wszystkie requesty decyzyjne wraz ze statusem lifecycle |
+| `GET`  | `/decisions/pending/:projectId` | Oczekujące decyzje PM |
+| `POST` | `/decisions` | Zapis decyzji PM (`approve`/`reject`) |
+| `POST` | `/decisions/:projectId/:decisionId/apply` | Oznaczenie zatwierdzonej decyzji jako zastosowanej |
+| `POST` | `/decisions/:projectId/:decisionId/skip` | Świadome pominięcie zatwierdzonej decyzji |
+| `POST` | `/decisions/:projectId/:decisionId/audit` | Audyt decyzji zastosowanej lub pominiętej |
+| `POST` | `/pm-chat/messages` | Bezpośredni czat PM z agentem; może tworzyć draft decyzji |
+| `GET`  | `/pm-chat/:projectId` | Wątki i wiadomości czatu PM-agent |
+| `POST` | `/pm-chat/:projectId/:threadId/confirm` | Zamiana draftu z czatu na formalne approval request |
+| `GET`  | `/scheduler/status` | Stan schedulera i ostatnich uruchomień |
+| `POST` | `/scheduler/enabled` | Włączenie/wyłączenie automatycznego schedulera |
+| `POST` | `/scheduler/run-daily` | Manualne uruchomienie daily check-in |
+| `POST` | `/scheduler/run-weekly` | Manualna generacja weekly report |
+| `GET`  | `/analytics/:projectId` | Metryki agentów, workload, ryzyka i statusy decyzji |
+| `GET`  | `/exports/weekly/:projectId.csv` | Eksport raportu tygodniowego do CSV |
+| `GET`  | `/exports/weekly/:projectId.pdf` | Eksport raportu tygodniowego do PDF |
+| `GET`  | `/integrations/status` | Status webhooków Slack/Teams |
+| `POST` | `/integrations/notify` | Wysłanie digestu/alertu do skonfigurowanych webhooków |
+| `GET`  | `/risks/:projectId` | Lista alertów ryzyka |
+| `GET`  | `/resource-recommendations/:projectId` | Rekomendacje rebalansowania zasobów |
+| `POST` | `/reports/weekly` | Generacja tygodniowego raportu |
+| `GET`  | `/reports/weekly/:projectId` | Odczyt ostatniego tygodniowego raportu |
+| `GET`  | `/state/:projectId` | Snapshot stanu projektu pod dashboard |
+
+Backbone persistence defaults to `data/backbone-store.json`. Override it with `BACKBONE_STORE_FILE=/path/to/store.json`.
+Scheduler configuration can be controlled with `SCHEDULER_ENABLED=true`, `DAILY_CHECKIN_TIME=09:00`, `WEEKLY_REPORT_DAY=friday`, and `WEEKLY_REPORT_TIME=16:00`.
+Optional API auth is enabled by setting `API_AUTH_TOKEN`; clients then send `X-API-Key`, `Authorization: Bearer ...`, or `?apiKey=...`.
+Slack/Teams notifications use `SLACK_WEBHOOK_URL` and `MS_TEAMS_WEBHOOK_URL`.
 
 ---
 
