@@ -14,9 +14,38 @@ import collectorRoutes from './routes/collector';
 import resourceBalancerRoutes from './routes/resource-balancer';
 import reporterRoutes from './routes/reporter';
 import eventsRoutes from './routes/events';
+import backboneRoutes from './routes/backbone';
+import { schedulerService } from './backbone/scheduler.service';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// CORS middleware - allow all origins in development, configure for production
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://pm-plus-production.up.railway.app'
+  ];
+  
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (process.env.NODE_ENV === 'development') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
 
 // Middleware
 app.use(express.json());
@@ -25,6 +54,46 @@ app.use(express.json());
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
   next();
+});
+
+const AUTH_PROTECTED_PREFIXES = [
+  '/agent',
+  '/agent-messages',
+  '/analytics',
+  '/collector',
+  '/decisions',
+  '/demo',
+  '/events',
+  '/exports',
+  '/human',
+  '/integrations',
+  '/me',
+  '/pm-chat',
+  '/reports',
+  '/resource-balancer',
+  '/resource-recommendations',
+  '/risks',
+  '/scheduler',
+  '/state',
+  '/updates',
+];
+
+app.use((req, res, next) => {
+  const token = process.env.API_AUTH_TOKEN;
+  if (!token) return next();
+
+  const shouldProtect = AUTH_PROTECTED_PREFIXES.some((prefix) => req.path === prefix || req.path.startsWith(`${prefix}/`));
+  if (!shouldProtect) return next();
+
+  const headerToken = req.header('X-API-Key');
+  const bearerToken = req.header('Authorization')?.replace(/^Bearer\s+/i, '');
+  const queryToken = typeof req.query.apiKey === 'string' ? req.query.apiKey : undefined;
+
+  if (headerToken === token || bearerToken === token || queryToken === token) {
+    return next();
+  }
+
+  return res.status(401).json({ error: 'Unauthorized' });
 });
 
 // Swagger UI with API Key pre-fill
@@ -56,6 +125,7 @@ app.use('/resource-balancer', resourceBalancerRoutes);
 app.use('/events', eventsRoutes);
 app.use('/', reporterRoutes);
 app.use('/', messagesRoutes);
+app.use('/', backboneRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -86,6 +156,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 app.listen(PORT, () => {
+  schedulerService.start();
   console.log(`API server running on port ${PORT}`);
   console.log(`\n📚 Swagger UI: http://localhost:${PORT}/api-docs`);
   console.log(`📄 OpenAPI Spec: http://localhost:${PORT}/api-docs.json`);
@@ -131,6 +202,36 @@ app.listen(PORT, () => {
   console.log(`\nState Management:`);
   console.log(`  GET    /state?sessionId=xxx`);
   console.log(`  POST   /state/event`);
+  console.log(`\nBackbone MVP (Data & Orchestrator):`);
+  console.log(`  POST   /demo/seed-team`);
+  console.log(`  POST   /demo/start-daily-checkin`);
+  console.log(`  POST   /demo/run-full-scenario`);
+  console.log(`  POST   /updates`);
+  console.log(`  GET    /updates/:projectId`);
+  console.log(`  GET    /agent-messages/:projectId`);
+  console.log(`  GET    /decisions/:projectId`);
+  console.log(`  GET    /decisions/pending/:projectId`);
+  console.log(`  POST   /decisions`);
+  console.log(`  GET    /risks/:projectId`);
+  console.log(`  GET    /resource-recommendations/:projectId`);
+  console.log(`  POST   /reports/weekly`);
+  console.log(`  GET    /reports/weekly/:projectId`);
+  console.log(`  GET    /state/:projectId`);
+  console.log(`  GET    /analytics/:projectId`);
+  console.log(`  GET    /exports/weekly/:projectId.csv`);
+  console.log(`  GET    /exports/weekly/:projectId.pdf`);
+  console.log(`  GET    /integrations/status`);
+  console.log(`  POST   /integrations/notify`);
+  console.log(`  POST   /pm-chat/messages`);
+  console.log(`  GET    /pm-chat/:projectId`);
+  console.log(`  POST   /pm-chat/:projectId/:threadId/confirm`);
+  console.log(`  POST   /decisions/:projectId/:decisionId/apply`);
+  console.log(`  POST   /decisions/:projectId/:decisionId/skip`);
+  console.log(`  POST   /decisions/:projectId/:decisionId/audit`);
+  console.log(`  GET    /scheduler/status`);
+  console.log(`  POST   /scheduler/enabled`);
+  console.log(`  POST   /scheduler/run-daily`);
+  console.log(`  POST   /scheduler/run-weekly`);
   console.log(`\nHealth:`);
   console.log(`  GET    /health`);
 });

@@ -11,11 +11,25 @@ const apiPaths = [
   '/state',
   '/collector',
   '/resource-balancer',
+  '/resource-recommendations',
+  '/analytics',
+  '/exports',
+  '/integrations',
+  '/reporter',
   '/agent',
+  '/agent-messages',
   '/me',
+  '/decisions',
+  '/risks',
+  '/reports',
+  '/pm-chat',
+  '/scheduler',
   '/events',
   '/checkins',
-  '/weekly-snapshot'
+  '/weekly-snapshot',
+  '/health',
+  '/api-docs',
+  '/api-docs.json'
 ];
 
 export default defineConfig({
@@ -25,8 +39,17 @@ export default defineConfig({
     proxy: Object.fromEntries(
       apiPaths.map((p) => [
         p,
-        { target: API_TARGET, changeOrigin: true }
+        {
+          target: API_TARGET,
+          changeOrigin: true,
+          secure: false,
+          ws: true // Enable WebSocket proxying for SSE
+        }
       ])
     )
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true
   }
 });

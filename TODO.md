@@ -34,9 +34,8 @@ Optional: `python src/mock_collector.py` — fires fake check-ins to Band withou
 - Mock collector (`src/mock_collector.py`) — posts Alice / Bob / Carol / Dave check-ins
 - Band agent config (`agent_config.yaml`) — all 3 agents have valid IDs and API keys
 
-### 🐛 Known issue
-- LLM returns `flag_id: "f-001"` copied from the prompt example instead of a unique ID
-- Not a blocker for the demo but worth fixing post-hackathon
+### Resolved issue
+- No active known issue in the local deterministic flow. Risk Analyzer overwrites LLM-provided `flag_id` with a local UUID before posting PM alerts.
 
 ---
 
@@ -84,7 +83,7 @@ Optional: `python src/mock_collector.py` — fires fake check-ins to Band withou
 
 ---
 
-## 🚀 MVP Hosting — Remaining Work
+## 🚀 MVP Hosting — Deployment Runbook
 
 ### 1. ⚡ Build the frontend ✅ DONE
 ```sh
@@ -130,8 +129,9 @@ git push
 
 ---
 
-## Post-hackathon (not blocking)
+## Implemented Follow-up Scope
 
-- 🐛 LLM returns `flag_id: "f-001"` — fix with `uuid` generation in the prompt or post-process in `risk.py`
-- Persistence — swap in-memory store for a lightweight DB (SQLite or Redis)
-- Auth on API endpoints
+- `flag_id` uniqueness is enforced in `src/agents/risk.py`.
+- Backbone persistence is available through `BACKBONE_STORE_FILE` and defaults to `data/backbone-store.json`.
+- Optional API auth is available through `API_AUTH_TOKEN`.
+- Real Python agent events are posted to `/events/agent` from `src/main.py`.

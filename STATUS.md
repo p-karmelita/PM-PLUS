@@ -25,8 +25,8 @@ PM-PLUS/
 - **LLM integration** — aimlapi.com (GPT-4o), fallback featherless.ai
 - **Mock collector** — `src/mock_collector.py` posts 3 fake check-ins (Alice, Bob, Carol)
 
-### Known issue (non-blocking)
-- LLM occasionally echoes `flag_id: "f-001"` from the prompt example instead of a unique id — fix post-hackathon.
+### Resolved issue
+- No active known issue in the local deterministic flow. Risk Analyzer overwrites LLM-provided `flag_id` with a local UUID before posting PM alerts.
 
 ---
 
@@ -106,7 +106,8 @@ StateStore  ──── emits UpdateEvent ────────────�
 
 ---
 
-## Remaining / nice-to-have
-- Replace the `on_event()` print stub in `src/main.py` with a POST to `/state/event` so the **real**
-  agent pipeline (not just the simulation) surfaces every event in the dashboard stream.
-- Fix the `flag_id` uniqueness issue noted under Role 1.
+## Implemented Follow-ups
+- Real agent events are POSTed from `src/main.py` to `/events/agent`.
+- `flag_id` uniqueness is enforced in `src/agents/risk.py`.
+- Optional API auth is available through `API_AUTH_TOKEN`.
+- Backbone persistence is available through `BACKBONE_STORE_FILE`.
