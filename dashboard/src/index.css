@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html,
@@ -14,16 +14,43 @@ body,
 
 body {
   margin: 0;
-  background: #0a0e14;
-  color: #e2e8f0;
+  background: #f8fafc;
+  color: #0f172a;
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
-/* thin scrollbars for the log panes */
+/* Graph animations */
+@keyframes graph-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+@keyframes dash-travel {
+  from { stroke-dashoffset: 69; }
+  to { stroke-dashoffset: -69; }
+}
+@keyframes node-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* thin scrollbars */
 .scroll-thin::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
 }
 .scroll-thin::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 3px;
+}
+.scroll-thin-dark::-webkit-scrollbar {
+  width: 4px;
+}
+.scroll-thin-dark::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-thin-dark::-webkit-scrollbar-thumb {
   background: #1e293b;
-  border-radius: 4px;
+  border-radius: 2px;
 }

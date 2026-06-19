@@ -63,3 +63,16 @@ export interface AgentHealth {
 }
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'idle';
+
+export interface TeamMemberState {
+  name: string;
+  initials: string;
+  role: string;
+  avatarGradient: string;
+  workload: number; // 0-100
+  workloadLabel: 'overwhelmed' | 'heavy' | 'normal' | 'light' | 'unknown';
+  blockers: string[];
+  lastCheckIn: string | null;
+  riskCount: number;
+  riskSeverity: 'HIGH' | 'CRITICAL' | 'MEDIUM' | 'LOW' | null;
+}
