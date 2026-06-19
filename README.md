@@ -77,6 +77,18 @@ PM-PLUS/
 
 ---
 
+## 🌐 Live Demo
+
+The API and dashboard are hosted on Railway:
+
+**➜ https://pm-plus-production.up.railway.app**
+
+> The **"Run Simulated Demo"** button works immediately — no keys, no setup. Click it to see the full 3-loop negotiation stream in real time.
+
+**⚠️ "Trigger Real Pipeline" requires the Python agents running locally** (see below). The agents are not hosted — they connect to Band.ai from your machine and POST events back to the hosted API.
+
+---
+
 ## 🚀 Quick Start
 
 > **Zero keys needed for the demo.** The dashboard ships with an offline simulation that streams the full 3-loop negotiation — no Band/LLM credentials required.
@@ -97,9 +109,16 @@ npm run dev          # ➜ http://localhost:5173
 **3 — Run the demo** → open **http://localhost:5173**, wait for the status dot to go 🟢 **Connected**, then click **▶ Run Simulated Demo**. Watch the negotiation loop stream in live, risk climb to **HIGH**, and a flag land in the **HITL Decision Panel** — approve it with a note.
 
 <details>
-<summary><b>Optional — run the real agent pipeline</b></summary>
+<summary><b>Run the real agent pipeline against the hosted API</b></summary>
 
 Requires Band/LLM keys (see [Configuration](#-configuration)).
+
+Set `STATE_STORE_URL` in your `.env` to point to the hosted API so agent events appear on the live dashboard:
+```bash
+STATE_STORE_URL=https://pm-plus-production.up.railway.app
+```
+
+Then start the agents locally:
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt

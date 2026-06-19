@@ -12,3 +12,8 @@ dist/
 .DS_Store
 *.log
 .idea/
+
+# Internal docs
+SUBMISSION.md
+VIDEO_SCRIPT.md
+TODO_1.md

@@ -146,13 +146,17 @@ class RiskAnalyzerAdapter(SimpleAdapter[list]):
         cprint(f"  [RISK] → LOOP 3: posting flag to PM alerts room...", "red", attrs=["bold"])
         # Emit before the await so the dashboard shows the card immediately
         self._emit("risk_flag_posted", flag.model_dump())
-        pm_room  = os.getenv("PM_ALERTS_ROOM_ID", "")
-        risk_key = os.getenv("RISK_ANALYZER_API_KEY", "")
+        pm_room   = os.getenv("PM_ALERTS_ROOM_ID", "")
+        risk_key  = os.getenv("RISK_ANALYZER_API_KEY", "")
+        risk_id   = os.getenv("RISK_ANALYZER_AGENT_ID", "")
         async with httpx.AsyncClient() as client:
             r = await client.post(
                 f"https://app.band.ai/api/v1/agent/chats/{pm_room}/messages",
                 headers={"X-API-Key": risk_key},
-                json={"message": {"content": f"🚨 RISK FLAG\n{flag.model_dump_json()}"}},
+                json={"message": {
+                    "content": f"🚨 RISK FLAG\n{flag.model_dump_json()}",
+                    "mentions": [{"id": risk_id, "handle": "risk_analyzer"}],
+                }},
             )
         if r.status_code in (200, 201):
             cprint(f"  [RISK] ✓ flag posted to PM alerts — awaiting approval (timeout {TIMEOUT}s)", "red")
