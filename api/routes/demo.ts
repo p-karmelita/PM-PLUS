@@ -173,7 +173,7 @@ async function runSimulation(sessionId: string): Promise<void> {
     const flagId = `f-${uuidv4().slice(0, 8)}`;
     emitMessage(sessionId, 'risk_analyzer', 'pm',
       "🚨 RISK FLAG (HIGH): Alice blocked 3 days on IT + overloaded. Proposed fix: reassign API task to Bob. Awaiting PM approval.",
-      'loop3', { messageType: 'notification', flag_id: flagId, severity: 'HIGH' });
+      'loop3', { messageType: 'notification', flag_id: flagId, severity: 'HIGH', employee_name: 'Alice', risk_type: 'overload' });
 
     const request: ApprovalRequest = {
       requestId: uuidv4(),
@@ -252,6 +252,11 @@ const REAL_CHECKINS = [
     type: 'check_in', employee_id: 'e3', employee_name: 'Carol',
     status: 'Blocked on Alice finishing the API.',
     blockers: 'Dependency on Alice.', workload: 'normal'
+  },
+  {
+    type: 'check_in', employee_id: 'e4', employee_name: 'Dave',
+    status: 'Assigned to 5 parallel tasks, cannot deliver any on time.',
+    blockers: 'Too many simultaneous assignments from 3 different PMs.', workload: 'heavy'
   }
 ];
 
@@ -316,7 +321,7 @@ router.post('/trigger-real', async (req: Request, res: Response) => {
       });
       results.push({ employee: checkin.employee_name, status: r.status });
 
-      // Mirror the trigger into the local stream so the dashboard reflects it.
+      // Mirror into the local stream (log line) so the dashboard reflects it.
       emitMessage(
         sessionId,
         'collector',
@@ -325,8 +330,25 @@ router.post('/trigger-real', async (req: Request, res: Response) => {
         'real',
         { messageType: 'broadcast', employee: checkin.employee_name }
       );
+
+      // Also populate the StateStore so Project Context metrics update exactly
+      // like the simulated demo — otherwise the panel stays blank in real mode.
+      const hasBlocker = !!checkin.blockers;
+      const isHeavy   = checkin.workload === 'heavy';
+      stateStore.addCollectedData({
+        dataId:      uuidv4(),
+        sessionId,
+        sourceType:  'check-in',
+        source:      checkin.employee_name,
+        category:    hasBlocker ? 'blocker' : 'update',
+        priority:    isHeavy && hasBlocker ? 'high' : hasBlocker ? 'medium' : 'low',
+        content:     checkin as Record<string, any>,
+        collectedAt: new Date().toISOString(),
+        status:      'pending',
+      });
     }
 
+    stateStore.calculateProjectMetrics(sessionId);
     res.status(202).json({ sessionId, mode: 'real', posted: results });
   } catch (error) {
     console.error('Error in demo/trigger-real:', error);

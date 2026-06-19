@@ -6,6 +6,7 @@ import DecisionPanel from './components/DecisionPanel';
 import AgentStatusView from './components/AgentStatusView';
 import ProjectContextViewer from './components/ProjectContextViewer';
 import MockDataGenerator from './components/MockDataGenerator';
+import WeeklyReport from './components/WeeklyReport';
 import type { ConnectionStatus } from './types';
 
 const STATUS_STYLE: Record<ConnectionStatus, { dot: string; label: string }> = {
@@ -78,6 +79,7 @@ export default function App() {
           <MockDataGenerator sessionId={sessionId} />
           <AgentStatusView agents={agents} />
           <ProjectContextViewer metrics={metrics} />
+          <WeeklyReport />
           <DecisionPanel approvals={approvals} onResolved={removeApproval} />
         </aside>
       </main>

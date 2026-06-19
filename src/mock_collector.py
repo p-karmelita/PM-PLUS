@@ -30,6 +30,11 @@ CHECKINS = [
         "status": "Blocked on Alice finishing the API.",
         "blockers": "Dependency on Alice.", "workload": "normal",
     },
+    {
+        "type": "check_in", "employee_id": "e4", "employee_name": "Dave",
+        "status": "Assigned to 5 parallel tasks, cannot deliver any on time.",
+        "blockers": "Too many simultaneous assignments from 3 different PMs.", "workload": "heavy",
+    },
 ]
 
 

@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import path from 'path';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger';
@@ -12,6 +13,7 @@ import meRoutes from './routes/me';
 import collectorRoutes from './routes/collector';
 import resourceBalancerRoutes from './routes/resource-balancer';
 import reporterRoutes from './routes/reporter';
+import eventsRoutes from './routes/events';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -51,6 +53,7 @@ app.use('/agent', agentRoutes);
 app.use('/me', meRoutes);
 app.use('/collector', collectorRoutes);
 app.use('/resource-balancer', resourceBalancerRoutes);
+app.use('/events', eventsRoutes);
 app.use('/', reporterRoutes);
 app.use('/', messagesRoutes);
 
@@ -59,8 +62,20 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// 404 handler
-app.use((req, res) => {
+// Serve the built React dashboard (production / hosted).
+// In dev, Vite runs on :5173 and proxies API calls to this server.
+const DASH_DIST = path.join(__dirname, '..', 'dashboard', 'dist');
+app.use(express.static(DASH_DIST));
+
+// SPA fallback — any non-API GET that reaches this point returns index.html.
+app.get('*', (_req, res, next) => {
+  res.sendFile(path.join(DASH_DIST, 'index.html'), (err) => {
+    if (err) next();
+  });
+});
+
+// 404 handler (API routes that truly don't exist)
+app.use((_req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 

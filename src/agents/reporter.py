@@ -12,6 +12,7 @@ from band.core.types import PlatformMessage
 from band.core.protocols import AgentToolsProtocol
 
 from core.types import HistoryQuery, HistoryResponse, EventLog, AgentEvent, CheckInMessage
+
 from core.router import MessageRouter
 from core.llm import call_llm
 from agents.reporter_prompts import HISTORY_PROMPT, REPORT_PROMPT
@@ -50,10 +51,12 @@ class ReporterAdapter(SimpleAdapter[list]):
             elif isinstance(payload, EventLog):
                 cprint(f"  [REPORTER] ✎ archiving event: {payload.event_kind}", "yellow")
                 await self._archive(payload.model_dump(), "/events")
+                self._emit("event_archived", payload.model_dump())
 
             elif isinstance(payload, CheckInMessage):
                 cprint(f"  [REPORTER] ✎ archiving check-in: {payload.employee_name}", "yellow")
                 await self._archive(payload.model_dump(), "/checkins")
+                self._emit("check_in_archived", payload.model_dump())
 
         mention = MessageRouter.get_mention(msg.content)
         if mention == "reporter" and "generate_report" in msg.content:
@@ -92,8 +95,17 @@ class ReporterAdapter(SimpleAdapter[list]):
             response = HistoryResponse(**result)
             cprint(f"  [REPORTER] → LOOP 1: sending history back to risk_analyzer — \"{response.summary}\"", "yellow", attrs=["bold"])
             await router.mention("risk_analyzer", response)
+            self._emit("history_responded", response.model_dump())
         except Exception as e:
             cprint(f"  [REPORTER] ✗ failed to send history response: {e}", "red")
+
+    def _emit(self, event_type: str, content: dict) -> None:
+        if self.event_callback:
+            self.event_callback(AgentEvent(
+                event_type=event_type,
+                agent_name="reporter",
+                content=content,
+            ).model_dump())
 
     async def _archive(self, data: dict, path: str) -> None:
         state_store = os.getenv("STATE_STORE_URL", "")
@@ -116,6 +128,7 @@ class ReporterAdapter(SimpleAdapter[list]):
         report = await call_llm(REPORT_PROMPT, json.dumps(snapshot))
         cprint(f"  [REPORTER] ✓ weekly report posted", "yellow", attrs=["bold"])
         await tools.send_message(content=report)
+        self._emit("weekly_report_generated", {"report": report[:300]})
 
 
 async def start_reporter(on_event=None):

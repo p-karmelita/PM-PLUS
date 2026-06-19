@@ -88,8 +88,14 @@ class RiskAnalyzerAdapter(SimpleAdapter[list]):
         if check_in.blockers:
             cprint(f"          blockers: {check_in.blockers}", "yellow")
 
+        self._emit("check_in_received", check_in.model_dump())
+
         # LOOP 1
         cprint(f"  [RISK] → LOOP 1: asking reporter for {check_in.employee_name}'s history...", "cyan")
+        self._emit("history_query_sent", {
+            "employee_id":   check_in.employee_id,
+            "employee_name": check_in.employee_name,
+        })
         history = await self._wait_for_history(check_in, router)
 
         if history:
@@ -122,6 +128,11 @@ class RiskAnalyzerAdapter(SimpleAdapter[list]):
         # LOOP 2
         if flag.risk_type == "overload":
             cprint(f"  [RISK] → LOOP 2: asking balancer for available resource...", "cyan")
+            self._emit("resource_request_sent", {
+                "employee_name":    flag.employee_name,
+                "task_description": flag.recommended_action,
+                "risk_type":        flag.risk_type,
+            })
             availability = await self._wait_for_resource(flag, router)
             if availability:
                 flag.recommended_action = (
@@ -133,6 +144,8 @@ class RiskAnalyzerAdapter(SimpleAdapter[list]):
         # LOOP 3 — post to PM_ALERTS_ROOM_ID via REST; tools is bound to OPS room
         # context and "pm" is not a valid participant handle in Band
         cprint(f"  [RISK] → LOOP 3: posting flag to PM alerts room...", "red", attrs=["bold"])
+        # Emit before the await so the dashboard shows the card immediately
+        self._emit("risk_flag_posted", flag.model_dump())
         pm_room  = os.getenv("PM_ALERTS_ROOM_ID", "")
         risk_key = os.getenv("RISK_ANALYZER_API_KEY", "")
         async with httpx.AsyncClient() as client:
