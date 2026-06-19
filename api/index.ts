@@ -11,6 +11,7 @@ import messagesRoutes from './routes/messages';
 import meRoutes from './routes/me';
 import collectorRoutes from './routes/collector';
 import resourceBalancerRoutes from './routes/resource-balancer';
+import reporterRoutes from './routes/reporter';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -50,6 +51,7 @@ app.use('/agent', agentRoutes);
 app.use('/me', meRoutes);
 app.use('/collector', collectorRoutes);
 app.use('/resource-balancer', resourceBalancerRoutes);
+app.use('/', reporterRoutes);
 app.use('/', messagesRoutes);
 
 // Health check
@@ -103,9 +105,14 @@ app.listen(PORT, () => {
   console.log(`  GET    /resource-balancer/recommendations?sessionId=xxx`);
   console.log(`  GET    /resource-balancer/metrics?sessionId=xxx`);
   console.log(`  POST   /resource-balancer/activity`);
+  console.log(`\nReporter Agent (State Store):`);
+  console.log(`  GET    /events?employee_id=xxx&days=30`);
+  console.log(`  POST   /events`);
+  console.log(`  POST   /checkins`);
+  console.log(`  GET    /weekly-snapshot`);
   console.log(`\nHuman-in-the-Loop:`);
   console.log(`  POST   /human/approval-request`);
-  console.log(`  POST   /human/approval-response`);
+  console.log(`  POST   /human/approval-response  (flag_id + pm_notes → bridges to Band)`);
   console.log(`\nState Management:`);
   console.log(`  GET    /state?sessionId=xxx`);
   console.log(`  POST   /state/event`);

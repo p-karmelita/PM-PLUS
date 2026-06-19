@@ -1,0 +1,11 @@
+risk_analyzer:
+  agent_id: "56f722eb-a61d-4857-b734-efc48d3b6bb0"
+  api_key: "band_a_1781733978_kC6drYCdEquOdo9aaRASTnOLans6mspR"
+
+reporter:
+  agent_id: "2cea9bd6-1209-4909-8c37-f716a2274d39"
+  api_key: "band_a_1781734100_sXHCphRsVibY5oPxhVwGrojYpdGdg85Y"
+
+resource_balancer:
+  agent_id: "8868f346-6799-46c2-b16f-6079dd0683c2"
+  api_key: "band_a_1781824574_Fjc5wGxhALOvL1LmHl3KlmThU1PFGrlT"

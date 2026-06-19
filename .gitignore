@@ -1,6 +1,14 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node
 node_modules/
 dist/
+
+# Shared
 .env
-*.log
 .DS_Store
+*.log
 .idea/
