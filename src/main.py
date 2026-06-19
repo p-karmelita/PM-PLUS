@@ -3,6 +3,7 @@ import logging
 from dotenv import load_dotenv
 from agents.risk import start_risk_analyzer
 from agents.reporter import start_reporter
+from agents.balancer import start_resource_balancer
 
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
@@ -19,6 +20,7 @@ async def main():
     await asyncio.gather(
         start_risk_analyzer(on_event=on_event),
         start_reporter(on_event=on_event),
+        start_resource_balancer(on_event=on_event),
     )
 
 

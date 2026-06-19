@@ -128,9 +128,9 @@ router.post('/approval-request', (req: Request, res: Response) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/approval-response', (req: Request, res: Response) => {
+router.post('/approval-response', async (req: Request, res: Response) => {
   try {
-    const { requestId, approved, reason } = req.body;
+    const { requestId, approved, reason, flag_id, pm_notes } = req.body;
 
     if (!requestId || typeof approved !== 'boolean') {
       return res.status(400).json({
@@ -145,8 +145,37 @@ router.post('/approval-response', (req: Request, res: Response) => {
       respondedAt: new Date().toISOString()
     };
 
-    // Resolve the approval request
     stateStore.resolveApproval(requestId);
+
+    // Bridge: if flag_id provided, post ApprovalResponse to Band OPS room
+    // so the Risk Analyzer's waiting future resolves.
+    const resolvedFlagId = flag_id || requestId;
+    const opsRoom = process.env.OPS_ROOM_ID || '';
+    const apiKey = process.env.REPORTER_API_KEY || process.env.RISK_ANALYZER_API_KEY || '';
+    const bandUrl = process.env.BAND_REST_URL || 'https://app.band.ai/api/v1';
+
+    if (opsRoom && apiKey) {
+      const approvalPayload = {
+        type: 'approval',
+        flag_id: resolvedFlagId,
+        approved,
+        pm_notes: pm_notes || reason || null,
+      };
+      try {
+        await fetch(`${bandUrl}/agent/chats/${opsRoom}/messages`, {
+          method: 'POST',
+          headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: {
+              content: `@risk_analyzer ${JSON.stringify(approvalPayload)}`,
+              mentions: [],
+            }
+          }),
+        });
+      } catch (bandErr) {
+        console.error('Failed to post approval to Band:', bandErr);
+      }
+    }
 
     res.status(200).json(response);
   } catch (error) {

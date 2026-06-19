@@ -30,6 +30,7 @@ class RiskAnalyzerAdapter(SimpleAdapter[list]):
         self.event_callback = on_event
         self._pending_history: dict[str, asyncio.Future] = {}
         self._pending_resource: dict[str, asyncio.Future] = {}
+        self._pending_approval: dict[str, asyncio.Future] = {}
 
     async def on_message(
         self,
@@ -71,6 +72,9 @@ class RiskAnalyzerAdapter(SimpleAdapter[list]):
             status = "APPROVED ✓" if payload.approved else "REJECTED ✗"
             color  = "green" if payload.approved else "red"
             cprint(f"  [RISK] ← LOOP 3 response: flag {payload.flag_id} {status}", color, attrs=["bold"])
+            future = self._pending_approval.pop(payload.flag_id, None)
+            if future and not future.done():
+                future.set_result(payload)
             self._emit("approval_received", payload.model_dump())
 
     async def _handle_check_in(
@@ -135,12 +139,19 @@ class RiskAnalyzerAdapter(SimpleAdapter[list]):
             r = await client.post(
                 f"https://app.band.ai/api/v1/agent/chats/{pm_room}/messages",
                 headers={"X-API-Key": risk_key},
-                json={"message": {"content": f"🚨 RISK FLAG\n{flag.model_dump_json()}", "mentions": []}},
+                json={"message": {"content": f"🚨 RISK FLAG\n{flag.model_dump_json()}"}},
             )
         if r.status_code in (200, 201):
-            cprint(f"  [RISK] ✓ flag posted to PM alerts — awaiting approval", "red")
+            cprint(f"  [RISK] ✓ flag posted to PM alerts — awaiting approval (timeout {TIMEOUT}s)", "red")
         else:
             cprint(f"  [RISK] ✗ failed to post PM alert: {r.status_code} {r.text[:120]}", "red")
+
+        approval = await self._wait_for_approval(flag.flag_id)
+        if approval:
+            verdict = "APPROVED" if approval.approved else "REJECTED"
+            cprint(f"  [RISK] ← LOOP 3: flag {flag.flag_id} {verdict}", "green" if approval.approved else "red", attrs=["bold"])
+        else:
+            cprint(f"  [RISK] ⏱ LOOP 3: no approval received within {TIMEOUT}s, continuing", "yellow")
 
         await router.mention("reporter", EventLog(
             source_agent="risk_analyzer",
@@ -186,6 +197,19 @@ class RiskAnalyzerAdapter(SimpleAdapter[list]):
             return await asyncio.wait_for(asyncio.shield(future), timeout=TIMEOUT)
         except asyncio.TimeoutError:
             self._pending_resource.pop(req.request_id, None)
+            return None
+
+    async def _wait_for_approval(
+        self,
+        flag_id: str,
+    ) -> Optional[ApprovalResponse]:
+        future = asyncio.get_event_loop().create_future()
+        self._pending_approval[flag_id] = future
+
+        try:
+            return await asyncio.wait_for(asyncio.shield(future), timeout=TIMEOUT)
+        except asyncio.TimeoutError:
+            self._pending_approval.pop(flag_id, None)
             return None
 
     def _emit(self, event_type: str, content: dict) -> None:
