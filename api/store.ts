@@ -12,6 +12,7 @@ import {
   AgentCheckIn
 } from './types';
 import { EventEmitter } from 'events';
+import { v4 as uuidv4 } from 'uuid';
 
 class StateStore extends EventEmitter {
   private sessions: Map<string, SessionState> = new Map();
@@ -209,9 +210,31 @@ class StateStore extends EventEmitter {
       .filter(rec => rec.sessionId === sessionId);
   }
 
+  // Internal: register an agent as active in a session and recalculate metrics.
+  private _touchAgent(sessionId: string, agentId: string, ts: string): void {
+    const TRACKED = new Set(['collector', 'risk_analyzer', 'reporter', 'resource_balancer']);
+    if (!TRACKED.has(agentId)) return;
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+    const idx = session.agents.findIndex(a => a.agentId === agentId);
+    if (idx >= 0) {
+      session.agents[idx].status = 'active';
+      session.agents[idx].lastActivity = ts;
+    } else {
+      session.agents.push({ agentId, status: 'active', lastActivity: ts });
+    }
+    session.updatedAt = new Date().toISOString();
+    this.sessions.set(sessionId, session);
+    this.calculateProjectMetrics(sessionId);
+  }
+
   // Agent Communication Methods
   addAgentMessage(message: AgentMessage): void {
     this.agentMessages.set(message.messageId, message);
+    // Keep session agent list and metrics in sync with what's actually messaging.
+    [message.fromAgentId, message.toAgentId].forEach(id => {
+      if (id) this._touchAgent(message.sessionId, id, message.sentAt);
+    });
     this.emitUpdate(message.sessionId, 'agent_message', message);
   }
 
@@ -257,6 +280,57 @@ class StateStore extends EventEmitter {
     return Array.from(this.agentCheckIns.values())
       .filter(ci => ci.sessionId === sessionId)
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
+  getAllCollectedData(): CollectedData[] {
+    return Array.from(this.collectedData.values());
+  }
+
+  getAllAgentMessages(): AgentMessage[] {
+    return Array.from(this.agentMessages.values());
+  }
+
+  getAllActiveSessions(): SessionState[] {
+    return Array.from(this.sessions.values()).filter(s => s.status === 'active');
+  }
+
+  // Creates an approval request in every active session so the dashboard HITL
+  // panel shows up regardless of which sessionId the dashboard is using.
+  broadcastApprovalRequest(partial: Pick<ApprovalRequest, 'agentId' | 'action' | 'context'>): void {
+    for (const session of this.getAllActiveSessions()) {
+      const request: ApprovalRequest = {
+        requestId:   uuidv4(),
+        sessionId:   session.sessionId,
+        agentId:     partial.agentId,
+        action:      partial.action,
+        context:     partial.context,
+        requestedAt: new Date().toISOString(),
+      };
+      session.pendingApprovals.push(request);
+      session.updatedAt = new Date().toISOString();
+      this.approvalRequests.set(request.requestId, request);
+      this.sessions.set(session.sessionId, session);
+      this.emitUpdate(session.sessionId, 'approval_request', request);
+    }
+  }
+
+  // Broadcast an AgentEvent from Python to all active SSE subscribers.
+  // Uses sessionId '*' as a wildcard that updates.ts passes through unconditionally.
+  broadcastAgentEvent(message: AgentMessage): void {
+    this.agentMessages.set(message.messageId, message);
+    // Register the agent in every active session so Project Context counts are correct.
+    for (const session of this.getAllActiveSessions()) {
+      [message.fromAgentId, message.toAgentId].forEach(id => {
+        if (id) this._touchAgent(session.sessionId, id, message.sentAt);
+      });
+    }
+    const event: UpdateEvent = {
+      type: 'agent_message',
+      sessionId: '*',
+      data: message,
+      timestamp: new Date().toISOString(),
+    };
+    this.emit('update', event);
   }
 
   // Project Metrics Methods

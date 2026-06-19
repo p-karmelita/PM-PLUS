@@ -73,7 +73,7 @@ class EventLog(BaseModel):
         "approval_received", "task_moved", "report_requested",
     ]
     payload: dict
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
 
 
 class AgentEvent(BaseModel):
@@ -81,4 +81,4 @@ class AgentEvent(BaseModel):
     agent_name: str
     room_id: Optional[str] = None
     content: dict
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")

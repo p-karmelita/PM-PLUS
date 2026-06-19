@@ -40,7 +40,8 @@ router.get('/', (req: Request, res: Response) => {
 
   // Listen for updates
   const updateListener = (event: UpdateEvent) => {
-    if (event.sessionId === sessionId) {
+    // sessionId '*' is the Python-agent broadcast wildcard; pass it to every subscriber.
+    if (event.sessionId === sessionId || event.sessionId === '*') {
       res.write(`data: ${JSON.stringify(event)}\n\n`);
     }
   };

@@ -50,7 +50,7 @@ export function useEventStream(sessionId: string | null) {
 
   const touchAgent = useCallback((name: string, kind: string, ts: string) => {
     if (!name || name === 'system') return;
-    const negotiating = kind === 'request' || kind === 'response';
+    const negotiating = kind === 'request';
     agentMap.current.set(name, {
       name,
       status: negotiating ? 'negotiating' : 'active',

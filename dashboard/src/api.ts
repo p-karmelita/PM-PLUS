@@ -27,6 +27,22 @@ export async function triggerReal(
   return postJSON('/demo/trigger-real', { sessionId });
 }
 
+export interface WeeklySnapshot {
+  period_days: number;
+  total_events: number;
+  total_check_ins: number;
+  risk_flags: number;
+  by_employee: Record<string, { checkIns: any[]; risks: any[] }>;
+  events: any[];
+}
+
+export async function fetchWeeklySnapshot(): Promise<WeeklySnapshot> {
+  const res = await fetch('/weekly-snapshot');
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data && (data.error as string)) || `HTTP ${res.status}`);
+  return data as WeeklySnapshot;
+}
+
 export interface ApprovalDecision {
   requestId: string;
   approved: boolean;
